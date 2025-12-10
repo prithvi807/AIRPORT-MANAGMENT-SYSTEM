@@ -1,0 +1,200 @@
+#include <stdio.h>
+#include <string.h>
+
+#define MAX_QUEUE_SIZE 5
+#define FLIGHT_LEN 20
+#define AIRLINE_LEN 50
+
+typedef struct {
+    char flightNo[FLIGHT_LEN];
+    char airline[AIRLINE_LEN];
+} Plane;
+
+Plane queueArr[MAX_QUEUE_SIZE];
+int front = 0;
+int rear = 0;
+int count = 0;
+
+int isEmpty() {
+    return (count == 0);
+}
+
+int isFull() {
+    return (count == MAX_QUEUE_SIZE);
+}
+
+void stripNewline(char *s) {
+    size_t len = strlen(s);
+    if (len > 0 && s[len - 1] == '\n')
+        s[len - 1] = '\0';
+}
+
+void saveToFile() {
+    FILE *fp = fopen("runway.txt", "w");
+    int i;
+
+    if (fp == NULL)
+        return;
+
+    for (i = 0; i < count; i++) {
+        int idx = (front + i) % MAX_QUEUE_SIZE;
+        fprintf(fp, "%s - %s\n",
+                queueArr[idx].flightNo,
+                queueArr[idx].airline);
+    }
+    fclose(fp);
+}
+
+void loadFromFile() {
+    FILE *fp = fopen("runway.txt", "r");
+    if (fp == NULL)
+        return;
+
+    char line[200];
+    while (fgets(line, sizeof(line), fp) && count < MAX_QUEUE_SIZE) {
+        char *sep = strstr(line, " - ");
+        if (sep != NULL) {
+            Plane p;
+            *sep = '\0';
+            strcpy(p.flightNo, line);
+            strcpy(p.airline, sep + 3);
+
+            stripNewline(p.flightNo);
+            stripNewline(p.airline);
+
+            queueArr[rear] = p;
+            rear = (rear + 1) % MAX_QUEUE_SIZE;
+            count++;
+        }
+    }
+    fclose(fp);
+}
+
+void addPlane() {
+    if (isFull()) {
+        printf("\nQueue is FULL. Cannot add more planes.\n");
+        return;
+    }
+
+    Plane p;
+    printf("Enter Flight Number: ");
+    scanf("%s", p.flightNo);
+
+    printf("Enter Airline Name: ");
+    getchar();
+    fgets(p.airline, AIRLINE_LEN, stdin);
+    stripNewline(p.airline);
+
+    queueArr[rear] = p;
+    rear = (rear + 1) % MAX_QUEUE_SIZE;
+    count++;
+
+    saveToFile();
+
+    printf("\nPlane added successfully.\n");
+}
+
+void allowTakeoff() {
+    if (isEmpty()) {
+        printf("\nQueue is EMPTY. No planes to take off.\n");
+        return;
+    }
+
+    Plane p = queueArr[front];
+    front = (front + 1) % MAX_QUEUE_SIZE;
+    count--;
+
+    saveToFile();
+
+    FILE *log = fopen("takeoff_log.txt", "a");
+    if (log != NULL) {
+        fprintf(log, "Plane Taking Off: %s - %s\n",
+                p.flightNo, p.airline);
+        fclose(log);
+    }
+
+    printf("\nPlane Taking Off:\n");
+    printf("Flight : %s\n", p.flightNo);
+    printf("Airline: %s\n", p.airline);
+}
+
+void frontPlane() {
+    if (isEmpty()) {
+        printf("\nQueue is EMPTY.\n");
+        return;
+    }
+
+    Plane p = queueArr[front];
+    printf("\nFront Plane Details:\n");
+    printf("Flight : %s\n", p.flightNo);
+    printf("Airline: %s\n", p.airline);
+}
+
+void checkEmpty() {
+    if (isEmpty())
+        printf("\nQueue is EMPTY.\n");
+    else
+        printf("\nQueue is NOT empty.\n");
+}
+
+void checkFull() {
+    if (isFull())
+        printf("\nQueue is FULL.\n");
+    else
+        printf("\nQueue is NOT full.\n");
+}
+
+void queueSize() {
+    printf("\nQueue Size: %d / %d\n", count, MAX_QUEUE_SIZE);
+}
+
+void displayQueue() {
+    if (isEmpty()) {
+        printf("\n<Queue is empty>\n");
+        return;
+    }
+
+    int i;
+    printf("\nCurrent Runway Queue:\n");
+    for (i = 0; i < count; i++) {
+        int idx = (front + i) % MAX_QUEUE_SIZE;
+        printf("Flight: %s | Airline: %s\n",
+               queueArr[idx].flightNo,
+               queueArr[idx].airline);
+    }
+}
+
+int main() {
+    int choice;
+    loadFromFile();
+
+    do {
+        printf("\n===== AIRPORT TAKE-OFF QUEUE SYSTEM =====\n");
+        printf("1. Add Plane\n");
+        printf("2. Allow Takeoff\n");
+        printf("3. Front Plane\n");
+        printf("4. Is Queue Empty\n");
+        printf("5. Is Queue Full\n");
+        printf("6. Queue Size\n");
+        printf("7. Display Queue\n");
+        printf("8. Exit\n");
+        printf("Enter choice: ");
+
+        if (scanf("%d", &choice) != 1)
+            break;
+
+        switch (choice) {
+        case 1: addPlane(); break;
+        case 2: allowTakeoff(); break;
+        case 3: frontPlane(); break;
+        case 4: checkEmpty(); break;
+        case 5: checkFull(); break;
+        case 6: queueSize(); break;
+        case 7: displayQueue(); break;
+        case 8: printf("\nExiting...\n"); break;
+        default: printf("\nInvalid choice\n");
+        }
+    } while (choice != 8);
+
+    return 0;
+}
